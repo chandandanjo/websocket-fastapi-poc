@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Document</title>
+</head>
+
+<body class="flex flex-col items-center justify-center w-screen h-screen bg-gray-900 text-gray-800 p-10">
+
+    <!-- Component Start -->
+    <div class="flex flex-col flex-grow w-full max-w-xl bg-gray-700 shadow-xl rounded-lg overflow-hidden">
+        <div class="flex flex-col flex-grow h-0 p-4 overflow-auto" id="messages-container"></div>
+        <div class="bg-gray-500 p-4">
+            <input id="send-message" class="flex items-center h-10 w-full rounded px-3 text-sm" type="text"
+                placeholder="Type your message…" disabled>
+        </div>
+    </div>
+    <!-- Component End  -->
+
+    <script>
+        const socket = new WebSocket(`${(window.location.protocol === 'http:') ? 'ws' : 'wss'}://${window.location.host}/`);
+        socket.onmessage = function (event) {
+            let data = JSON.parse(event.data)
+            createMessage(data.message, data.id, true)
+        }
+        socket.onopen = function () {
+            const sendMessageButton = document.getElementById('send-message')
+            sendMessageButton.removeAttribute('disabled')
+            sendMessageButton.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    sendMessage(sendMessageButton.value)
+                    sendMessageButton.value = ''
+                }
+            })
+        }
+
+
+        const createMessage = (message, id = null, isReceived = false) => {
+            const msg = document.createElement('div')
+            msg.className = isReceived ? 'flex w-full mt-2 space-x-3 max-w-xs text-wrap: pretty' : 'flex w-full mt-2 space-x-3 max-w-xs ml-auto justify-end text-wrap: pretty'
+            const msgContent = document.createElement('div')
+            msgContent.className = isReceived ? 'bg-gray-300 p-3 rounded-r-lg rounded-bl-lg' : 'bg-blue-600 text-white p-3 rounded-l-lg rounded-br-lg'
+            const msgText = document.createElement('p')
+            msgText.className = 'text-sm'
+            msgText.innerText = message
+            msgContent.appendChild(msgText)
+            if (id) {
+                const user = document.createElement('span')
+                user.className = 'text-xs text-gray-500 leading-none'
+                user.innerText = id
+                msgContent.appendChild(user)
+            }
+            msg.appendChild(msgContent)
+            document.getElementById('messages-container').appendChild(msg)
+            document.getElementById('messages-container').scrollTop = document.getElementById('messages-container').scrollHeight
+        }
+
+        const sendMessage = (message) => {
+            message = message.trim()
+            if (message.length === 0) {
+                return
+            }
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(message)
+                createMessage(message)
+            }
+        }
+    </script>
+</body>
+
+</html>
